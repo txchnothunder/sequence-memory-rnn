@@ -1,41 +1,47 @@
 # Sequence Memory RNN
 
-Multi-task RNN predicting InSeq/OutSeq and odor identity (A-E) from hippocampal
-LFP activity, benchmarked against the graph-based baseline in
-[MaGNet (Zhou et al.)](https://arxiv.org/abs/2309.13459).
+## What is this project?
+
+Rats were trained to sniff a sequence of five odors, one at a time, in a specific order (like A, B, C,
+D, E). Sometimes the sequence was correct ("InSeq"), and sometimes one odor was swapped out of place
+("OutSeq"), and the rat had to notice the difference. While this happened, researchers recorded
+electrical activity from the rat's hippocampus (a brain region central to memory), using tiny
+electrodes.
+
+Our goal is to build a model that looks at that raw brain activity and predicts, for each trial, two things:
+1. Was this an InSeq or OutSeq trial?
+2. Which odor (A, B, C, D, or E) was it?
+
+A prior paper (MaGNet) already tried something similar using a graph-based model and got it right
+roughly 66-74% of the time depending on the rat. Our goal is to try a different approach (a recurrent
+neural network, RNN, a model designed for data that unfolds over time) and see if we can do better,
+while also being able to explain *why* the model makes the predictions it does, not just report a
+number.
+
+## What's in this repo
+
+- Code that loads and inspects the raw brain-recording files
+- Code that turns raw recordings into clean, labeled chunks of data
+- The RNN model itself
+- Code that explains the model's predictions (which electrodes/timepoints mattered most)
+- A fully reproducible environment, so this runs identically on any computer
 
 ## Setup
 
-### Option A: GitHub Codespaces (zero local setup, great for non-technical collaborators)
+### Using Docker
 
-On the repo page, click the green **Code** button → **Codespaces** tab →
-**Create codespace on main**. This builds the same Docker environment used
-locally, entirely in your browser, no install required. Takes about a
-minute. Once it opens, run `jupyter notebook --ip=0.0.0.0` in the terminal
-and click the forwarded port 8888 link when it pops up.
+1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (free)
+2. Open a terminal in this project folder and run:
+   ```bash
+   make build   # one-time, builds the environment, a few minutes
+   make up      # starts Jupyter
+   ```
+3. Open `http://localhost:8888` in your browser
 
-Requires the person to have a free GitHub account and be added as a
-collaborator on the repo (Settings → Collaborators).
+Note: on Mac, Docker can't use the Apple GPU, so training runs on CPU inside Docker. That's fine for
+this project's scale.
 
-### Option B: Docker locally (recommended, guarantees reproducibility)
-
-Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-installed and running.
-
-```bash
-# Build the image
-make build
-
-# Start Jupyter (visit http://localhost:8888 in your browser)
-make up
-```
-
-Note: containers on Mac can't access the Apple GPU (MPS), so training inside
-Docker runs on CPU. Fine for this project's scale, but if you want GPU
-speedup while iterating, use Option B instead and save Docker for final,
-shareable runs.
-
-### Option C: Native venv (faster iteration on Apple Silicon)
+### Using Terminal
 
 ```bash
 python3 -m venv venv
@@ -44,47 +50,41 @@ pip install -r requirements.txt
 jupyter notebook
 ```
 
-## Data
+## Getting the data
 
-Place raw `.npz` files under `data/raw/<rat>/<session>/`. This directory is
-gitignored, raw data never gets committed or pushed.
+Raw `.npz` recording files go in `data/raw/<session_folder>/`. This folder is intentionally excluded from the git (see `.gitignore`). The raw data is shared separately (currently via the lab's Google Drive).
 
-## Workflow
+## Understanding the data
 
-1. **Data audit first.** Open `notebooks/01_data_audit.ipynb` and run it
-   against one session. Confirm real key names, shapes, trial markers, and
-   label locations before writing any preprocessing logic.
-2. Fill in `src/preprocessing.py` (`segment_trials`, `build_labels`) based on
-   what the audit reveals.
-3. Fill in the `Dataset`/`DataLoader` section of `src/train.py`.
-4. Run training: `make train` (Docker) or `python -m src.train` (venv).
-5. Interpretability via `src/explain.py`, Integrated Gradients per
-   channel/timestep, directly comparable to the paper's own IntGradients
-   baseline in Section 6.
+Open `notebooks/01_data_audit.ipynb`. It's written to be read top to bottom, every code cell has a plain-language explanation before it (what it does and why) and a findings summary after it (what we learned). No prior knowledge of the data assumed.
 
 ## Reproducibility notes
 
-- All hyperparameters live in `configs/*.yaml`, not hardcoded in scripts.
-- `src/utils.set_seed()` seeds Python, NumPy, and PyTorch (CPU/CUDA/MPS).
-- Splits are done by session, not by trial, to avoid leaking data from the
-  same recording session across train/val/test.
-- `requirements.txt` pins exact versions so results are reproducible across
-  your machine and Wonjae's.
+- All hyperparameters live in `configs/*.yaml`
+- `src/utils.set_seed()` seeds Python, NumPy, and PyTorch (CPU/CUDA/MPS) so runs are consistent
+- Train/val/test splits are done by recording session, not by individual trial, since trials from the same session aren't independent (same rat, same day), splitting at the trial level would leak information between train and test
+- `requirements.txt` pins exact package versions so results reproduce identically across machines.
 
 ## Project structure
 
 ```
 ├── src/                  importable pipeline code
-│   ├── data_loading.py   npz inspection + loading
+│   ├── data_loading.py   loading and inspecting raw .npz files
 │   ├── preprocessing.py  trial segmentation, label extraction
-│   ├── models.py         MultiTaskRNN architecture
+│   ├── models.py         the MultiTaskRNN architecture
 │   ├── train.py          training loop
 │   ├── explain.py        interpretability (Integrated Gradients)
 │   └── utils.py          seeding, config loading, device selection
-├── notebooks/            exploration only, not the real pipeline
-├── configs/               hyperparameters, one YAML per experiment
+├── notebooks/            exploration and analysis, e.g. the data audit
+├── configs/              one YAML file per experiment's hyperparameters
 ├── data/                 raw (gitignored) and processed data
-├── outputs/              checkpoints and logs (gitignored)
+├── outputs/              model checkpoints and logs (gitignored)
+├── .devcontainer/        GitHub Codespaces configuration
 ├── Dockerfile / docker-compose.yml
-└── Makefile              make build / make up / make audit / make train
+└── Makefile              shortcuts: make build / make up / make audit / make train
 ```
+
+## Background reading
+
+- The benchmark paper: [MaGNet, arXiv:2309.13459](https://arxiv.org/abs/2309.13459)
+- The original behavioral task this data comes from: Fortin lab hippocampal sequence memory studies
