@@ -1,0 +1,33 @@
+# Baseline config, single rat, single session, RNN multi-task model
+seed: 42
+
+data:
+  rat: null # set once you know real rat/session naming, e.g. "superchris"
+  session_dir: null # path under data/raw/, e.g. "data/raw/superchris/080718"
+  window_ms: 500 # trial window length in ms, adjust after data audit
+  train_frac: 0.7
+  val_frac: 0.15
+  test_frac: 0.15
+  split_by: session # split by session, not trial, to avoid leakage
+
+model:
+  type: gru # gru or lstm
+  hidden_size: 64
+  num_layers: 1
+  bidirectional: false
+  dropout: 0.2
+
+train:
+  batch_size: 32
+  epochs: 50
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  early_stopping_patience: 8
+  # multi-task loss weights: inseq_outseq (binary), odor_id (5-class)
+  loss_weight_inseq: 1.0
+  loss_weight_odor: 1.0
+
+output:
+  checkpoint_dir: outputs/checkpoints
+  log_dir: outputs/logs
+  run_name: baseline_run1

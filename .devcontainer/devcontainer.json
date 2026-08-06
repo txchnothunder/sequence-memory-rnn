@@ -1,0 +1,23 @@
+{
+  "name": "sequence-memory-rnn",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
+  "forwardPorts": [8888],
+  "portsAttributes": {
+    "8888": {
+      "label": "Jupyter Notebook",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postCreateCommand": "jupyter notebook --generate-config",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-toolsai.jupyter"
+      ]
+    }
+  }
+}

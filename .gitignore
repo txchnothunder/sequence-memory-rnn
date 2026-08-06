@@ -1,0 +1,29 @@
+# Data (large binary files don't belong in git)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Model outputs
+outputs/checkpoints/*
+!outputs/checkpoints/.gitkeep
+outputs/logs/*
+!outputs/logs/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+venv/
+.venv/
+*.egg-info/
+
+# Env / secrets
+.env
+
+# OS
+.DS_Store
+
+# Jupyter
+notebooks/*.ipynb_checkpoints

@@ -1,0 +1,17 @@
+services:
+  seqmem:
+    build: .
+    volumes:
+      # Mount local code + data into the container so edits and data
+      # persist without rebuilding the image. Raw data stays local,
+      # never gets baked into the image or pushed to git.
+      - ./src:/app/src
+      - ./configs:/app/configs
+      - ./notebooks:/app/notebooks
+      - ./data:/app/data
+      - ./outputs:/app/outputs
+    ports:
+      - "8888:8888"
+    command: >
+      jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser
+      --allow-root --NotebookApp.token=''
